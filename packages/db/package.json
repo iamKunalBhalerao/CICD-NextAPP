@@ -1,9 +1,6 @@
 {
   "name": "@repo/db",
   "version": "1.0.0",
-  "description": "",
-  "keywords": [],
-  "main": "index.js",
   "exports": {
     ".": "./src/index.ts"
   },

@@ -1,0 +1,2 @@
+-- CreateEnum
+CREATE TYPE "ANYTHING" AS ENUM ('ADMIN', 'USER');
