@@ -14,4 +14,4 @@ jobs:
           touch /home/runner/.ssh/known_hosts
           echo "${{ secrets.KNOWN_HOSTS }}" &> /home/runner/.ssh/known_hosts
           chmod 700 /home/runner/ssh_key
-          ssh -i ~/ssh_key ubuntu@13.127.151.223 -t "cd CICD-NextAPP/ && git pull origin main && export PATH=/root/.nvm/versions/node/v22.13.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin && npm install -g pnpm && pnpm install && pnpm run build && pm2 restart web && pm2 restart http-sever && pm2 restart ws-sever"
+          ssh -i ~/ssh_key ubuntu@13.127.151.223 -t "cd CICD-NextAPP/ && git pull origin main && export PATH=/home/ubuntu/.local/share/pnpm/bin:/home/ubuntu/.nvm/versions/node/v24.21.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin && npm install -g pnpm && pnpm install && pnpm run build && pm2 restart web && pm2 restart http-sever && pm2 restart ws-sever"
