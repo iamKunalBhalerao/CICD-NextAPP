@@ -1,159 +1,199 @@
-# Turborepo starter
+# BKMYSW
 
-This Turborepo starter is maintained by the Turborepo core team.
+This project is a small monorepo for a web application with multiple services:
 
-## Using this example
+- Web app: Next.js frontend in `apps/web`
+- API server: Express backend in `apps/http-server`
+- WebSocket server: real-time service in `apps/ws-server`
+- Shared database package: Prisma setup in `packages/db`
 
-Run the following command:
+The project uses a Turbo monorepo setup and pnpm workspaces.
 
-```sh
-npx create-turbo@latest
+## Project structure
+
+```bash
+.
+├── apps/
+│   ├── web/           # Frontend application
+│   ├── http-server/   # REST API server
+│   └── ws-server/     # WebSocket server
+├── packages/
+│   ├── db/            # Prisma database package
+│   ├── ui/            # Shared UI components
+│   └── ...
+├── .github/
+│   └── workflows/     # GitHub Actions deployment files
+├── package.json
+├── pnpm-workspace.yaml
+└── turbo.json
 ```
 
-## What's inside?
+## What the app does
 
-This Turborepo includes the following packages/apps:
+The frontend is a Next.js app, the backend is an Express service, and the WebSocket server handles real-time communication. The database layer is shared through Prisma so all services can use the same schema and client.
 
-### Apps and Packages
+This is a good example of a full-stack project where multiple apps run together but are managed from one repository.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Local development
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+Install dependencies:
 
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```bash
+pnpm install
 ```
 
-Without global `turbo`, use your package manager:
+Run the apps together:
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
+```bash
+pnpm dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Or build the project:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
+```bash
+pnpm build
 ```
 
-Without global `turbo`:
+## CI/CD and deployment flow
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+The repository includes GitHub Actions workflow files in `.github/workflows`.
+
+### 1) Deployment trigger
+
+There are two workflow files:
+
+- `.github/workflows/cd_staging.yml`
+- `.github/workflows/cd_prod.yml`
+
+They are triggered with:
+
+```yaml
+on:
+  push:
+    branches: [main]
 ```
 
-### Develop
+and
 
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
+```yaml
+on:
+  push:
+    branches: [production]
 ```
 
-Without global `turbo`, use your package manager:
+This means:
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
+- when code is pushed to `main`, deployment runs to the staging server
+- when code is pushed to `production`, deployment runs to the production server
+
+### 2) GitHub runner setup
+
+When the workflow runs on GitHub-hosted Ubuntu, it starts a runner and executes the script inside the `steps` section.
+
+The workflow does the following:
+
+```yaml
+- run: |
+    echo "${{ secrets.SSH_PRIVATE_KEY }}" &> ~/ssh_key
+    mkdir -p /home/runner/.ssh
+    touch /home/runner/.ssh/known_hosts
+    echo "${{ secrets.KNOWN_HOSTS }}" &> /home/runner/.ssh/known_hosts
+    chmod 700 /home/runner/ssh_key
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+This sets up SSH authentication so GitHub can connect securely to the remote VPS/server.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### 3) SSH into the server
 
-```sh
-turbo dev --filter=web
+Then it connects to the server using SSH:
+
+```bash
+ssh -i ~/ssh_key ubuntu@13.127.151.223 -t "cd CICD-NextAPP/ && ..."
 ```
 
-Without global `turbo`:
+or:
 
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+```bash
+ssh -i ~/ssh_key ubuntu@3.110.175.27 -t "cd CICD-NextAPP/ && ..."
 ```
 
-### Remote Caching
+This means the GitHub Actions runner logs into the remote machine and runs deployment commands there.
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+### 4) Pull latest code
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+Inside the remote server, the workflow does:
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
+```bash
+git pull origin main
 ```
 
-Without global `turbo`, use your package manager:
+or
 
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
+```bash
+git pull origin production
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+So the server always receives the latest version of the branch that was pushed.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+### 5) Install dependencies and build
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+The workflow sets the PATH for Node and pnpm and then runs:
 
-```sh
-turbo link
+```bash
+npm install -g pnpm
+pnpm install
+pnpm run build
 ```
 
-Without global `turbo`:
+This ensures the project dependencies are installed and the app is built before deployment.
 
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
+### 6) Restart services
+
+Finally, it restarts the application processes using PM2:
+
+```bash
+pm2 restart web
+pm2 restart http-server
+pm2 restart ws-server
 ```
 
-## Useful Links
+This means the app is updated and the running services are restarted so the new code is served.
 
-Learn more about the power of Turborepo:
+## Why this is CI/CD
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+This project follows a simple CI/CD pattern:
+
+1. Developer pushes code to GitHub
+2. GitHub Actions starts automatically
+3. The workflow connects to the deployment server
+4. Code is pulled from the branch
+5. Dependencies are installed
+6. The app is built
+7. Services are restarted on the server
+
+That is the core idea of continuous deployment: every push to a configured branch can trigger an automated deploy.
+
+## Important GitHub secrets
+
+The workflow depends on secrets such as:
+
+- `SSH_PRIVATE_KEY`
+- `KNOWN_HOSTS`
+
+These must be added in the GitHub repository settings under Settings → Secrets and variables → Actions.
+
+This is important because the workflow needs access to the SSH server without exposing private credentials in the repository.
+
+## Best practices to improve this setup
+
+This setup works, but it can be improved further with:
+
+- running tests before deployment
+- separate build and deploy jobs
+- using environment protection rules for staging and production
+- checking for lint or type errors automatically
+- storing environment variables in `.env` files or secret managers
+
+## Summary
+
+This repository is a full-stack monorepo with a frontend, backend, and WebSocket service. The GitHub Actions workflow files automate deployment by SSH-ing into a server, pulling the latest code, installing dependencies, building the app, and restarting PM2 processes. That is a practical and common way to deploy code automatically to the internet.
